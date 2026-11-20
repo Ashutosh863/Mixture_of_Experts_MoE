@@ -422,23 +422,74 @@ If that is still not enough, shorten the context:
 
 ## Results
 
-<!-- Fill this in from your own training logs. -->
+The full default run was trained on a Google Colab **Tesla T4** (14.6 GB usable VRAM).
+
+### Run summary
+
+| Item | Value |
+|---|---|
+| Stories loaded | 100,000 |
+| Total tokens | 21,621,154 (≈ 20.5M train / 1.1M validation) |
+| Model parameters | 26,244,608 (26.24M), the same as the count calculated above |
+| Effective batch | 16 sequences × 256 tokens = 4,096 tokens per step |
+| Optimizer steps | 2,000 |
+| Tokens trained on | ≈ 8.2M (≈ 0.4 of one pass over the training data) |
+| **Final validation loss** | **2.53** |
+| **Final validation perplexity** | **12.5** |
+
+### Evaluation over training
 
 | Step | Train loss | Val loss | Val perplexity |
 |---|---|---|---|
-| 250 | – | – | – |
-| 1000 | – | – | – |
-| 2000 | – | – | – |
+| 250 | 3.779 | 3.824 | 45.76 |
+| 500 | 3.300 | 3.278 | 26.53 |
+| 750 | 3.005 | 2.844 | 17.18 |
+| 1000 | 2.838 | 2.824 | 16.85 |
+| 1250 | 2.747 | 2.734 | 15.39 |
+| 1500 | 2.608 | 2.530 | 12.55 |
+| 1750 | 2.568 | 2.554 | 12.85 |
+| **2000** | **2.539** | **2.529** | **12.54** |
 
-**Sample generation** (prompt: *"Once upon a time"*):
+Each value is the average of 20 random batches. The loss shown includes the small load-balancing term
+(0.01 × aux ≈ 0.01), so the pure language-modeling loss and perplexity are about 1% lower.
+
+### What the results show
+
+- **The model learned quickly.** A completely random guess over 50,257 tokens would give a loss of
+  ln(50,257) ≈ 10.8. By step 25 the loss was already **7.87**, because the model had learned the most
+  common tokens. The loss reached **2.53** by step 2,000.
+  Validation perplexity fell from 45.8 to **12.5**. Perplexity 12.5 means that, on average, the model is
+  about as uncertain as if it were choosing between ~12 equally likely next tokens, out of 50,257.
+- **No overfitting.** Train and validation loss stay close together throughout (2.539 vs 2.529 at the
+  end). This is expected, because the model saw less than half of the training data once.
+- **The router did not collapse.** The `aux` loss started at ~1.04 and stayed between **1.00 and 1.01**
+  for the rest of training. 1.0 is the value for perfectly even routing, so tokens were spread across all
+  4 experts in every layer and no expert was left unused.
+- **Progress was slowing down at the end.** Validation loss barely changed between steps 1,500 and 2,000
+  (12.55 → 12.85 → 12.54). With a constant learning rate, the step-to-step loss also stayed noisy
+  (2.37–2.73). Learning-rate decay, more steps, or more data are the obvious next things to try (see
+  below).
+
+### Possible next experiments
+
+- Add learning-rate warmup and cosine decay, which usually gives a lower final loss for the same number
+  of steps.
+- Train for longer (e.g. 5,000–10,000 steps) to see more of the 21.6M available tokens.
+- Compare against a **dense** baseline (one FFN of the same active size) to measure what MoE adds.
+- Try more experts (e.g. 8 routed, Top-2) to test finer expert specialization.
+
+### Sample generation
+
+Prompt: *"Once upon a time"* (temperature 0.8, top-k 40):
 
 ```
-(paste generated text here)
+(to be added: output of generate.py)
 ```
 
-**Router observations:**
+### Router observations
 
-- (e.g. how evenly tokens spread across experts; whether any expert seems to specialize)
+(to be added: output of inspect_router.py, e.g. whether some experts specialize in punctuation, names, or
+verbs)
 
 ---
 
