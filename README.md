@@ -1,4 +1,4 @@
-# Mini DeepSeek-MoE: a Mixture-of-Experts language model trained from scratch on a free T4 GPU
+# Mini DeepSeek-MoE: a Mixture-of-Experts language model trained from scratch 
 
 This project builds a small, **DeepSeek-inspired Mixture-of-Experts (MoE)** language model in plain
 PyTorch. It trains the model **from randomly initialized weights** on the
